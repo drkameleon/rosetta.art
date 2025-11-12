@@ -1,2 +1,5 @@
 entry: {src/rosetta}
+depends: [
+    [mwiki >= 0.3.0]
+]
 requires: [> 0.9.83]
