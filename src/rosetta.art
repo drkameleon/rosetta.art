@@ -99,54 +99,25 @@ define :Rosetta [
         \wiki\editPage title content sum
     ]
     
-    fetchCategory: method [category :string][
-        ;; description: « fetch all members of a category with pagination
-        ;; returns: :block
-
-        results: []
-        continue: ""
-        
-        while ø [
-            params: #[
-                action: "query"
-                list: "categorymembers"
-                cmtitle: ~"Category:|category|"
-                cmlimit: "500"
-                format: "json"
-            ]
-            
-            unless empty? continue ->
-                params\cmcontinue: continue
-
-            response: \wiki\api.get params
-            body: read.json response\body
-            
-            'results ++ map body\query\categorymembers 'page ->
-                page\title
-                
-            (key? body 'continue)?
-                -> continue: body\continue\cmcontinue
-                -> break
-        ]
-        
-        return results
-    ]
-    
     unimplemented: method [lang :string][
         ;; description: « find all tasks without implementation for given language
         ;; returns: :block
 
-        allTasks: \fetchCategory "Programming_Tasks"
-        langTasks: \fetchCategory lang
+        allTasks: \wiki\category "Programming_Tasks"
+        langTasks: \wiki\category lang
         
-        return difference allTasks langTasks
+        if null? allTasks -> return []
+        if null? langTasks -> return []
+        
+        return difference allTasks\members langTasks\members
     ]
     
     implemented: method [lang :string][
         ;; description: « get all tasks with implementations for given language
         ;; returns: :block
 
-        return \fetchCategory lang
+        langTasks: \wiki\category lang
+        (null? langTasks)? -> [] -> langTasks\members
     ]
     
     draftTasks: method [limit :integer :null][
