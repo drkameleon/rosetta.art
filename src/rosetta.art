@@ -8,7 +8,7 @@
 ; (c) 2025 Yanis Zafirópulos
 ;===============================================
 
-import 'mwiki!
+import ./{../../mwiki.art/src/mwiki}!
 
 ;===========================================
 ; Type definitions
@@ -116,10 +116,11 @@ define :Rosetta [
         ;; description: « get all tasks with implementations for given language
         ;; returns: :block
 
-        lmt: limit ?? 100
-        
-        allTasks: \wiki\search.limit:lmt ~"incategory:\"Programming Tasks\" |lang|"
-        return select allTasks 'task -> \hasLanguage task lang
+        ;lmt: limit ?? 100
+        inspect \wiki
+        allTasks: \wiki\search.category:"Programming Tasks" lang
+        inspect allTasks
+        ;return select allTasks 'task -> task\hasLanguage? lang
     ]
     
     draftTasks: method [limit :integer :null][
