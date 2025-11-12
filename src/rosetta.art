@@ -1,0 +1,141 @@
+;===============================================
+; Rosetta.art
+;
+; RosettaCode helper wrapper
+; for Arturo
+;
+; MIT License
+; (c) 2025 Yanis Zafirópulos
+;===============================================
+
+import 'mwiki!
+
+;===========================================
+; Type definitions
+;===========================================
+
+define :rcTask [
+    init: constructor [title content]
+
+    hasLanguage?: method [lang :string][
+        ;; description: « check if task has implementation for given language
+        ;; returns: :logical :null
+
+        if null? \content -> return ø
+        return contains? \content "=={{header|" ++ ~"|lang|}}=="
+    ]
+    
+    string: method [][
+        ~"Task: |\title|"
+    ]
+]
+
+;===========================================
+; Main Implementation
+;===========================================
+
+define :Rosetta [
+
+    ;------------------------------
+    ; Constructor
+    ;------------------------------
+
+    init: method [][
+        \wiki: to :MW ["https://rosettacode.org/w/api.php"]!
+        \loggedIn: false
+    ]
+    
+    ;----------------------------------
+    ; Core Methods (language-agnostic)
+    ;----------------------------------
+    
+    login: method [username :string, password :string][
+        ;; description: « authenticate with RosettaCode
+        ;; returns: :logical
+
+        \loggedIn: \wiki\login username password
+        return \loggedIn
+    ]
+    
+    task: method [title :string][
+        ;; description: « retrieve task content
+        ;; returns: :rcTask :null
+
+        page: \wiki\page title
+        if null? page -> return ø
+        return to :rcTask @[title page\content]!
+    ]
+    
+    addSolution: method [title :string, lang :string, code :string, summary :string :null][
+        ;; description: « add or update solution for given language
+        ;; returns: :logical
+
+        unless \loggedIn -> return false
+        
+        page: \wiki\page title
+        if null? page -> return false
+
+        content: page\content
+        sectionHeader: ~"==|lang|=="
+        
+        ; Check if language section exists
+        content: (contains? content sectionHeader)? [
+            ; Replace existing solution
+            parts: split.by:sectionHeader content
+            before: first parts
+            after: split.by:"\n==" last parts
+            
+            newContent: before ++ sectionHeader ++ "\n" ++ code
+            (1 < size after) ?
+                -> newContent ++ "\n==" ++ join.with:"\n==" slice after 1 (size after)-1
+                -> newContent
+        ][
+            ; Add new section at end
+            content ++ "\n\n" ++ sectionHeader ++ "\n" ++ code
+        ]
+        
+        sum: summary ?? "Added " ++ lang ++ " solution"
+        
+        \wiki\editPage title content sum
+    ]
+    
+    unimplemented: method [lang :string, limit :integer :null][
+        ;; description: « find tasks without implementation for given language
+        ;; returns: :block
+
+        lmt: limit ?? 50
+        
+        ; Get all programming tasks
+        allTasks: \wiki\search.limit:lmt "incategory:\"Programming Tasks\""
+        
+        ; Filter out tasks that already have the language
+        return select allTasks 'task -> not? \hasLanguage task lang
+    ]
+    
+    implemented: method [lang :string, limit :integer :null][
+        ;; description: « get all tasks with implementations for given language
+        ;; returns: :block
+
+        lmt: limit ?? 100
+        
+        allTasks: \wiki\search.limit:lmt ~"incategory:\"Programming Tasks\" |lang|"
+        return select allTasks 'task -> \hasLanguage task lang
+    ]
+    
+    draftTasks: method [limit :integer :null][
+        ;; description: « get draft programming tasks
+        ;; returns: :block
+
+        lmt: limit ?? 50
+        return \wiki\search.limit:lmt "incategory:\"Draft Programming Tasks\""
+    ]
+
+    ;------------------------------
+    ; Magic
+    ;------------------------------
+    
+    string: method [][
+        status: \loggedIn ? -> "logged in" -> "not logged in"
+        ~"RosettaCode (|status|)"
+    ]
+]
