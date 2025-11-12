@@ -15,7 +15,41 @@ import ./{../../mwiki.art/src/mwiki}!
 ;===========================================
 
 define :rcSolution [
-    init: constructor [language content]
+    init: method [language :string, content :string][
+        \language: language
+        \content: content
+        
+        \code: []
+        codeParts: split.by:"<syntaxhighlight" \content
+        if 1 < size codeParts [
+            loop slice codeParts 1 (size codeParts)-1 'part [
+                ; Find closing tag
+                if contains? part "</syntaxhighlight>" [
+                    innerParts: split.by:">" part
+                    if 1 < size innerParts [
+                        codePart: join.with:">" slice innerParts 1 (size innerParts)-1
+                        codePart: first split.by:"</syntaxhighlight>" codePart
+                        \code: \code ++ strip codePart
+                    ]
+                ]
+            ]
+        ]
+        
+        \output: null
+        if contains? \content "{{out}}" [
+            outParts: split.by:"{{out}}" \content
+            if 1 < size outParts [
+                afterOut: last outParts
+                if contains? afterOut "<pre>" [
+                    preParts: split.by:"<pre>" afterOut
+                    if 1 < size preParts [
+                        outputPart: first split.by:"</pre>" last preParts
+                        \output: strip outputPart
+                    ]
+                ]
+            ]
+        ]
+    ]
     
     string: method [][
         ~"Solution: |\language| (|size \content| chars)"
@@ -23,7 +57,7 @@ define :rcSolution [
 ]
 
 define :rcTask [
-    init: method [wiki, title][
+    init: method [wiki :MW, title :string][
         \wiki: wiki
         \title: title
 
@@ -35,32 +69,39 @@ define :rcTask [
     ]
     
     parseContent: method [][
-        ;; description: « parse task content into structured data
-        
         if null? \_content -> return false
         
         lines: split.lines \_content
         
         ; Extract categories
-        \_categories: select lines 'line ->
-            contains? line "[[Category:"
-        map \_categories 'cat [
-            parts: split.by:":" cat
-            if 1 < size parts [
-                clean: replace last parts "]]" ""
-                clean
-            ] else -> cat
+        \_categories: []
+        \_draft?: false
+        
+        loop lines 'line [
+            if contains? line "{{task|" [
+                parts: split.by:"|" line
+                if 1 < size parts [
+                    catPart: last parts
+                    catPart: replace catPart "}}" ""
+                    \_categories: \_categories ++ strip catPart
+                ]
+            ]
+            if contains? line "{{draft task|" [
+                \_draft?: true
+                parts: split.by:"|" line
+                if 1 < size parts [
+                    catPart: last parts
+                    catPart: replace catPart "}}" ""
+                    \_categories: \_categories ++ strip catPart
+                ]
+            ]
         ]
         
-        ; Check if draft
-        \_draft?: some? \_categories 'cat ->
-            contains? cat "Draft Programming Tasks"
-        
-        ; Extract description (everything before first ==header==)
+        ; Extract description
         descLines: []
         loop lines 'line [
             if and? [prefix? line "=="] [suffix? line "=="] -> break
-            'descLines ++ line
+            descLines: descLines ++ line
         ]
         \_description: strip join.with:"\n" descLines
         
@@ -80,17 +121,18 @@ define :rcTask [
                 ; Start new solution
                 parts: split.by:"|" line
                 if 1 < size parts [
-                    currentLang: replace (first slice parts 1 (size parts)-1) "}}==" ""
+                    langPart: first slice parts 1 (size parts)-1
+                    langPart: replace langPart "}}==" ""
+                    currentLang: strip langPart
                     currentContent: []
                 ]
             ][
-                if currentLang [
-                    'currentContent ++ line
-                ]
+                if currentLang ->
+                    currentContent: currentContent ++ line
             ]
         ]
         
-        ; last solution
+        ; Extract last solution
         if currentLang [
             sol: to :rcSolution @[currentLang join.with:"\n" currentContent]!
             \_solutions: \_solutions ++ sol
@@ -118,7 +160,7 @@ define :rcTask [
         ;; description: « check if task is a draft
         ;; returns: :logical :null
         
-        if \_draft? -> return \_draft?
+        unless null? \_draft? -> return \_draft?
         
         ; Force content load which will parse and set \_draft?
         discard \content
@@ -131,9 +173,7 @@ define :rcTask [
         ;; returns: :string :null
         
         if \_description -> return \_description
-
-        ; Force content load which will parse and set \_description
-        discard \content
+        discard \content        ; see above^
 
         return \_description
     ]
@@ -143,9 +183,7 @@ define :rcTask [
         ;; returns: :block :null
         
         if \_categories -> return \_categories
-
-        ; Force content load which will parse and set \_categories
-        discard \content
+        discard \content        ; see above^
 
         return \_categories
     ]
@@ -155,9 +193,7 @@ define :rcTask [
         ;; returns: :block :null
         
         if \_solutions -> return \_solutions
-
-        ; Force content load which will parse and set \_solutions
-        discard \content
+        discard \content        ; see above^
 
         return \_solutions
     ]
@@ -169,17 +205,47 @@ define :rcTask [
         sols: \solutions
         if null? sols -> return ø
         
-        return select.first sols 'sol -> sol\language = lang
+        return first select.first sols 'sol -> sol\language = lang
     ]
-
-    hasLanguage?: method [lang :string][
-        ;; description: « check if task has implementation for given language
-        ;; returns: :logical :null
-
-        cnt: \content
-        if null? cnt -> return ø
-        return contains? cnt "=={{header|" ++ ~"|lang|}}=="
-    ]
+    
+    ; addSolution: method [solution :rcSolution, summary :string :null][
+    ;     ;; description: « add or update solution for this task
+    ;     ;; returns: :logical
+        
+    ;     unless \wiki\loggedIn -> return false
+        
+    ;     cnt: \content
+    ;     if null? cnt -> return false
+        
+    ;     sectionHeader: ~"=={{header||\solution\language|}}=="
+        
+    ;     ; Check if language section exists
+    ;     newContent: (contains? cnt sectionHeader)? [
+    ;         ; Replace existing solution
+    ;         parts: split.by:sectionHeader cnt
+    ;         before: first parts
+    ;         after: split.by:"\n==" last parts
+            
+    ;         result: before ++ sectionHeader ++ "\n" ++ solution\content
+    ;         (1 < size after)?
+    ;             -> result ++ "\n==" ++ join.with:"\n==" slice after 1 (size after)-1
+    ;             -> result
+    ;     ][
+    ;         ; Add new section at end
+    ;         cnt ++ "\n\n" ++ sectionHeader ++ "\n" ++ solution\content
+    ;     ]
+        
+    ;     sum: summary ?? "Added " ++ solution\language ++ " solution"
+        
+    ;     success: \wiki\editPage \title newContent sum
+        
+    ;     if success [
+    ;         \_content: newContent
+    ;         \parseContent
+    ;     ]
+        
+    ;     return success
+    ; ]
     
     string: method [][
         ~"Task: |\title|"
@@ -197,7 +263,7 @@ define :Rosetta [
     ;------------------------------
 
     init: method [][
-        \wiki: to :MW ["https://rosettacode.org/w/api.php"]!
+        \wiki: to :MW ["https://rosettacode.org/w/api.php"]
         \loggedIn: false
     ]
     
@@ -220,40 +286,7 @@ define :Rosetta [
         page: \wiki\page title
         if null? page -> return ø
         
-        return to :rcTask.content: page\content @[\wiki title]!
-    ]
-    
-    addSolution: method [title :string, lang :string, code :string, summary :string :null][
-        ;; description: « add or update solution for given language
-        ;; returns: :logical
-
-        unless \loggedIn -> return false
-        
-        page: \wiki\page title
-        if null? page -> return false
-
-        content: page\content
-        sectionHeader: ~"==|lang|=="
-        
-        ; Check if language section exists
-        content: (contains? content sectionHeader)? [
-            ; Replace existing solution
-            parts: split.by:sectionHeader content
-            before: first parts
-            after: split.by:"\n==" last parts
-            
-            newContent: before ++ sectionHeader ++ "\n" ++ code
-            (1 < size after)?
-                -> newContent ++ "\n==" ++ join.with:"\n==" slice after 1 (size after)-1
-                -> newContent
-        ][
-            ; Add new section at end
-            content ++ "\n\n" ++ sectionHeader ++ "\n" ++ code
-        ]
-        
-        sum: summary ?? "Added " ++ lang ++ " solution"
-        
-        \wiki\editPage title content sum
+        return to :rcTask.content: page\content @[\wiki title]
     ]
     
     unimplemented: method [lang :string][
@@ -270,7 +303,7 @@ define :Rosetta [
             [prefix? & "Category:"]
         
         return map cleanTitles 'title ->
-            to :rcTask @[\wiki title]!
+            to :rcTask @[\wiki title]
     ]
     
     implemented: method [lang :string][
@@ -284,17 +317,23 @@ define :Rosetta [
             [prefix? & "Category:"]
 
         return map cleanTitles 'title ->
-            to :rcTask @[\wiki title]!
+            to :rcTask @[\wiki title]
     ]
     
-    draftTasks: method [limit :integer :null][
+    drafts: method [][
         ;; description: « get draft programming tasks
         ;; returns: :block
 
-        lmt: limit ?? 50
-        titles: \wiki\search.limit:lmt "incategory:\"Draft Programming Tasks\""
+        lmt: 1000
+        draftCat: \wiki\category.limit:lmt "Draft_Programming_Tasks"
         
-        return map titles 'title -> to :rcTask @[\wiki title]!
+        if null? draftCat -> return []
+        
+        cleanTitles: filter draftCat\members =>
+            [prefix? & "Category:"]
+        
+        return map cleanTitles 'title ->
+            to :rcTask @[\wiki title]
     ]
 
     ;------------------------------
