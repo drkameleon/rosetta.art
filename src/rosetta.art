@@ -141,7 +141,7 @@ define :Rosetta [
         langTasks: \wiki\category lang
         if null? langTasks -> return []
         
-        cleanTitles: filter langTasks\members 'title =>
+        cleanTitles: filter langTasks\members =>
             [prefix? & "Category:"]
 
         return map cleanTitles 'title ->
