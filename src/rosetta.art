@@ -19,24 +19,24 @@ define :rcTask [
         \wiki: wiki
         \title: title
 
-        \content: attr'content
+        \_content: attr'content
     ]
     
-    getContent: method [][        
-        if \content -> return \content
+    content: method [][        
+        if \_content -> return \_content
         
         page: \wiki\page \title
         if null? page -> return ø
         
-        \content: page\content
-        return \content
+        \_content: page\content
+        return \_content
     ]
 
     hasLanguage?: method [lang :string][
         ;; description: « check if task has implementation for given language
         ;; returns: :logical :null
 
-        cnt: \getContent
+        cnt: \content
         if null? cnt -> return ø
         return contains? cnt "=={{header|" ++ ~"|lang|}}=="
     ]
