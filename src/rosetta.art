@@ -131,11 +131,12 @@ define :Rosetta [
         if null? allTasks -> return []
         if null? langTasks -> return []
         
-        tasks: select map difference allTasks\members langTasks\members 'title -> 
-            to :rcTask @[\wiki title]!
-        't [t\isTask?]
+        return difference allTasks\members langTasks\members
+        ; tasks: select map difference allTasks\members langTasks\members 'title -> 
+        ;     to :rcTask @[\wiki title]
+        ; 't [t\isTask?]
 
-        return tasks
+        ; return tasks
     ]
     
     implemented: method [lang :string][
@@ -146,7 +147,7 @@ define :Rosetta [
         if null? langTasks -> return []
         
         tasks: select map langTasks\members 'title ->
-            to :rcTask @[\wiki title]!
+            to :rcTask @[\wiki title]
         't [t\isTask?]
         
         return tasks
