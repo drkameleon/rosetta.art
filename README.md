@@ -46,7 +46,6 @@ print task\description
 
 ; Get the Arturo solution
 if solution: <= task\solution "Arturo" [
-    print "Code:"
     loop solution\code 'code ->
         print code
 ]
