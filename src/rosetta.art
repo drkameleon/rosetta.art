@@ -14,22 +14,162 @@ import ./{../../mwiki.art/src/mwiki}!
 ; Type definitions
 ;===========================================
 
+define :rcSolution [
+    init: constructor [language content]
+    
+    string: method [][
+        ~"Solution: |\language| (|size \content| chars)"
+    ]
+]
+
 define :rcTask [
     init: method [wiki, title][
         \wiki: wiki
         \title: title
 
-        \_content: attr'content
+        \_content: attr 'content
+        \_draft?: null
+        \_description: null
+        \_categories: null
+        \_solutions: null
     ]
     
-    content: method [][        
+    parseContent: method [][
+        ;; description: « parse task content into structured data
+        
+        if null? \_content -> return false
+        
+        lines: split.lines \_content
+        
+        ; Extract categories
+        \_categories: select lines 'line ->
+            contains? line "[[Category:"
+        map \_categories 'cat [
+            parts: split.by:":" cat
+            if 1 < size parts [
+                clean: replace last parts "]]" ""
+                clean
+            ] else -> cat
+        ]
+        
+        ; Check if draft
+        \_draft?: some? \_categories 'cat ->
+            contains? cat "Draft Programming Tasks"
+        
+        ; Extract description (everything before first ==header==)
+        descLines: []
+        loop lines 'line [
+            if and? [prefix? line "=="] [suffix? line "=="] -> break
+            'descLines ++ line
+        ]
+        \_description: strip join.with:"\n" descLines
+        
+        ; Extract solutions
+        \_solutions: []
+        currentLang: null
+        currentContent: []
+        
+        loop lines 'line [
+            switch and? [prefix? line "=={{header|"] [contains? line "}}=="] [
+                ; Save previous solution
+                if currentLang [
+                    sol: to :rcSolution @[currentLang join.with:"\n" currentContent]!
+                    \_solutions: \_solutions ++ sol
+                ]
+                
+                ; Start new solution
+                parts: split.by:"|" line
+                if 1 < size parts [
+                    currentLang: replace (first slice parts 1 (size parts)-1) "}}==" ""
+                    currentContent: []
+                ]
+            ][
+                if currentLang [
+                    'currentContent ++ line
+                ]
+            ]
+        ]
+        
+        ; last solution
+        if currentLang [
+            sol: to :rcSolution @[currentLang join.with:"\n" currentContent]!
+            \_solutions: \_solutions ++ sol
+        ]
+        
+        return true
+    ]
+    
+    content: method [][
+        ;; description: « get task content, loading from wiki if needed
+        ;; returns: :string :null
+        
         if \_content -> return \_content
         
         page: \wiki\page \title
         if null? page -> return ø
         
         \_content: page\content
+        \parseContent
+        
         return \_content
+    ]
+    
+    draft?: method [][
+        ;; description: « check if task is a draft
+        ;; returns: :logical :null
+        
+        if \_draft? -> return \_draft?
+        
+        ; Force content load which will parse and set \_draft?
+        discard \content
+
+        return \_draft?
+    ]
+    
+    description: method [][
+        ;; description: « get task description
+        ;; returns: :string :null
+        
+        if \_description -> return \_description
+
+        ; Force content load which will parse and set \_description
+        discard \content
+
+        return \_description
+    ]
+    
+    categories: method [][
+        ;; description: « get task categories
+        ;; returns: :block :null
+        
+        if \_categories -> return \_categories
+
+        ; Force content load which will parse and set \_categories
+        discard \content
+
+        return \_categories
+    ]
+    
+    solutions: method [][
+        ;; description: « get all language solutions
+        ;; returns: :block :null
+        
+        if \_solutions -> return \_solutions
+
+        ; Force content load which will parse and set \_solutions
+        discard \content
+
+        return \_solutions
+    ]
+    
+    solution: method [lang :string][
+        ;; description: « get solution for specific language
+        ;; returns: :rcSolution :null
+        
+        sols: \solutions
+        if null? sols -> return ø
+        
+        return select.first sols 'sol -> sol\language = lang
     ]
 
     hasLanguage?: method [lang :string][
@@ -80,8 +220,7 @@ define :Rosetta [
         page: \wiki\page title
         if null? page -> return ø
         
-        t: to :rcTask.content: page\content @[\wiki title]!
-        return t
+        return to :rcTask.content: page\content @[\wiki title]!
     ]
     
     addSolution: method [title :string, lang :string, code :string, summary :string :null][
@@ -131,7 +270,7 @@ define :Rosetta [
             [prefix? & "Category:"]
         
         return map cleanTitles 'title ->
-            to :rcTask @[\wiki title]
+            to :rcTask @[\wiki title]!
     ]
     
     implemented: method [lang :string][
@@ -145,7 +284,7 @@ define :Rosetta [
             [prefix? & "Category:"]
 
         return map cleanTitles 'title ->
-            to :rcTask @[\wiki title]
+            to :rcTask @[\wiki title]!
     ]
     
     draftTasks: method [limit :integer :null][
