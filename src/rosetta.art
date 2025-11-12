@@ -31,10 +31,6 @@ define :rcTask [
         \content: page\content
         return \content
     ]
-    
-    isTask?: method [][
-        not? prefix? \title "Category:"
-    ]
 
     hasLanguage?: method [lang :string][
         ;; description: « check if task has implementation for given language
@@ -130,13 +126,12 @@ define :Rosetta [
         
         if null? allTasks -> return []
         if null? langTasks -> return []
-        
-        return difference allTasks\members langTasks\members
-        ; tasks: select map difference allTasks\members langTasks\members 'title -> 
-        ;     to :rcTask @[\wiki title]
-        ; 't [t\isTask?]
 
-        ; return tasks
+        cleanTitles: filter difference allTasks\members langTasks\members =>
+            [prefix? & "Category:"]
+        
+        return map cleanTitles 'title ->
+            to :rcTask @[\wiki title]
     ]
     
     implemented: method [lang :string][
@@ -146,11 +141,11 @@ define :Rosetta [
         langTasks: \wiki\category lang
         if null? langTasks -> return []
         
-        tasks: select map langTasks\members 'title ->
+        cleanTitles: filter langTasks\members 'title =>
+            [prefix? & "Category:"]
+
+        return map cleanTitles 'title ->
             to :rcTask @[\wiki title]
-        't [t\isTask?]
-        
-        return tasks
     ]
     
     draftTasks: method [limit :integer :null][
