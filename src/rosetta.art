@@ -15,14 +15,34 @@ import ./{../../mwiki.art/src/mwiki}!
 ;===========================================
 
 define :rcTask [
-    init: constructor [title content]
+    init: method [wiki, title][
+        \wiki: wiki
+        \title: title
+
+        \content: attr'content
+    ]
+    
+    getContent: method [][        
+        if \content -> return \content
+        
+        page: \wiki\page \title
+        if null? page -> return ø
+        
+        \content: page\content
+        return \content
+    ]
+    
+    isTask?: method [][
+        not? prefix? \title "Category:"
+    ]
 
     hasLanguage?: method [lang :string][
         ;; description: « check if task has implementation for given language
         ;; returns: :logical :null
 
-        if null? \content -> return ø
-        return contains? \content "=={{header|" ++ ~"|lang|}}=="
+        cnt: \getContent
+        if null? cnt -> return ø
+        return contains? cnt "=={{header|" ++ ~"|lang|}}=="
     ]
     
     string: method [][
@@ -46,7 +66,7 @@ define :Rosetta [
     ]
     
     ;----------------------------------
-    ; Core Methods (language-agnostic)
+    ; Methods
     ;----------------------------------
     
     login: method [username :string, password :string][
@@ -63,7 +83,9 @@ define :Rosetta [
 
         page: \wiki\page title
         if null? page -> return ø
-        return to :rcTask @[title page\content]!
+        
+        t: to :rcTask.content: page\content @[\wiki title]!
+        return t
     ]
     
     addSolution: method [title :string, lang :string, code :string, summary :string :null][
@@ -102,14 +124,18 @@ define :Rosetta [
     unimplemented: method [lang :string][
         ;; description: « find all tasks without implementation for given language
         ;; returns: :block
-
+        
         allTasks: \wiki\category "Programming_Tasks"
         langTasks: \wiki\category lang
         
         if null? allTasks -> return []
         if null? langTasks -> return []
         
-        return difference allTasks\members langTasks\members
+        tasks: select map difference allTasks\members langTasks\members 'title -> 
+            to :rcTask @[\wiki title]!
+        't [t\isTask?]
+
+        return tasks
     ]
     
     implemented: method [lang :string][
@@ -117,7 +143,13 @@ define :Rosetta [
         ;; returns: :block
 
         langTasks: \wiki\category lang
-        (null? langTasks)? -> [] -> langTasks\members
+        if null? langTasks -> return []
+        
+        tasks: select map langTasks\members 'title ->
+            to :rcTask @[\wiki title]!
+        't [t\isTask?]
+        
+        return tasks
     ]
     
     draftTasks: method [limit :integer :null][
@@ -125,7 +157,9 @@ define :Rosetta [
         ;; returns: :block
 
         lmt: limit ?? 50
-        return \wiki\search.limit:lmt "incategory:\"Draft Programming Tasks\""
+        titles: \wiki\search.limit:lmt "incategory:\"Draft Programming Tasks\""
+        
+        return map titles 'title -> to :rcTask @[\wiki title]!
     ]
 
     ;------------------------------
