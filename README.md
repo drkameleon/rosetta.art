@@ -224,18 +224,6 @@ Get solution for specific language.
 - *:rcSolution* - solution object for the specified language
 - *:null* - language not found or content not available
 
-##### `hasLanguage?`
-
-Check if task has implementation for given language.
-
-<pre>
-<b>hasLanguage?</b> <ins>lang</ins> <i>:string</i>
-</pre>
-
-###### Returns
-- *:logical* - `true` if language implementation exists
-- *:null* - content not available
-
 ### 🔹 rcSolution
 
 Represents a language solution with extracted code and output
@@ -249,15 +237,11 @@ Represents a language solution with extracted code and output
 #### Fields
 
 - `\language` - programming language name
-- `\content` - raw solution wikitext
 - `\code` - array of extracted code blocks (from `<syntaxhighlight>` tags)
 - `\output` - extracted output text (from `{{out}}` section)
 
 > [!TIP]
-> All task data is lazily loaded and cached! The first call to `content()`, `solutions()`, etc. fetches and parses the content, then subsequent calls use the cached data. 😉
-
-> [!TIP]
-> Code blocks and output are automatically extracted during solution initialization - no need to call separate methods!
+> All task data is lazily loaded and cached! The first call to `\content`, `\solutions`, etc. fetches and parses the content, then subsequent calls use the cached data. 😉
 
 <hr/>
 
