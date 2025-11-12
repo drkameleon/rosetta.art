@@ -24,7 +24,7 @@
 
 ## What does this package do?
 
-This package provides a comprehensive RosettaCode API wrapper for Arturo, enabling easy interaction with the RosettaCode wiki. It handles authentication, task retrieval, solution parsing, and provides structured access to task content, categories, and code examples - all with automatic lazy loading and caching.
+This package provides a comprehensive RosettaCode API wrapper for Arturo, enabling easy interaction with the RosettaCode wiki. It handles authentication, task retrieval, solution parsing, as well as structured access to task content/categories/examples/etc.
 
 ## How do I use it?
 
@@ -40,13 +40,12 @@ rc: to :Rosetta []!
 tasks: rc\implemented "Arturo"
 print ["Arturo has" size tasks "implementations"]
 
-; Get a specific task
-task: rc\task "Fibonacci sequence"
+; Get information about a specific task
+task: last tasks
 print task\description
 
 ; Get the Arturo solution
-solution: task\solution "Arturo"
-if solution [
+if solution: <= task\solution "Arturo" [
     print "Code:"
     loop solution\code 'code ->
         print code
@@ -59,9 +58,6 @@ print ["Missing implementations:" size unimpl]
 ; Get draft tasks
 drafts: rc\drafts
 print ["Draft tasks:" size drafts]
-
-; Check if a task is a draft
-print ["Is draft?" task\draft?]
 ```
 
 ## Type reference
@@ -228,18 +224,6 @@ Get solution for specific language.
 - *:rcSolution* - solution object for the specified language
 - *:null* - language not found or content not available
 
-##### `hasLanguage?`
-
-Check if task has implementation for given language.
-
-<pre>
-<b>hasLanguage?</b> <ins>lang</ins> <i>:string</i>
-</pre>
-
-###### Returns
-- *:logical* - `true` if language implementation exists
-- *:null* - content not available
-
 ### 🔹 rcSolution
 
 Represents a language solution with extracted code and output
@@ -253,15 +237,11 @@ Represents a language solution with extracted code and output
 #### Fields
 
 - `\language` - programming language name
-- `\content` - raw solution wikitext
 - `\code` - array of extracted code blocks (from `<syntaxhighlight>` tags)
 - `\output` - extracted output text (from `{{out}}` section)
 
 > [!TIP]
-> All task data is lazily loaded and cached! The first call to `content()`, `solutions()`, etc. fetches and parses the content, then subsequent calls use the cached data. 😉
-
-> [!TIP]
-> Code blocks and output are automatically extracted during solution initialization - no need to call separate methods!
+> All task data is lazily loaded and cached! The first call to `\content`, `\solutions`, etc. fetches and parses the content, then subsequent calls use the cached data. 😉
 
 <hr/>
 
