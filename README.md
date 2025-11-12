@@ -24,7 +24,7 @@
 
 ## What does this package do?
 
-This package provides a comprehensive RosettaCode API wrapper for Arturo, enabling easy interaction with the RosettaCode wiki. It handles authentication, task retrieval, solution parsing, and provides structured access to task content, categories, and code examples - all with automatic lazy loading and caching.
+This package provides a comprehensive RosettaCode API wrapper for Arturo, enabling easy interaction with the RosettaCode wiki. It handles authentication, task retrieval, solution parsing, as well as structured access to task content/categories/examples/etc.
 
 ## How do I use it?
 
