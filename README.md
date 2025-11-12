@@ -40,13 +40,12 @@ rc: to :Rosetta []!
 tasks: rc\implemented "Arturo"
 print ["Arturo has" size tasks "implementations"]
 
-; Get a specific task
-task: rc\task "Fibonacci sequence"
+; Get information about a specific task
+task: last tasks
 print task\description
 
 ; Get the Arturo solution
-solution: task\solution "Arturo"
-if solution [
+if solution: <= task\solution "Arturo" [
     print "Code:"
     loop solution\code 'code ->
         print code
@@ -59,9 +58,6 @@ print ["Missing implementations:" size unimpl]
 ; Get draft tasks
 drafts: rc\drafts
 print ["Draft tasks:" size drafts]
-
-; Check if a task is a draft
-print ["Is draft?" task\draft?]
 ```
 
 ## Type reference
