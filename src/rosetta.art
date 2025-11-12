@@ -86,7 +86,7 @@ define :Rosetta [
             after: split.by:"\n==" last parts
             
             newContent: before ++ sectionHeader ++ "\n" ++ code
-            (1 < size after) ?
+            (1 < size after)?
                 -> newContent ++ "\n==" ++ join.with:"\n==" slice after 1 (size after)-1
                 -> newContent
         ][
@@ -99,28 +99,54 @@ define :Rosetta [
         \wiki\editPage title content sum
     ]
     
-    unimplemented: method [lang :string, limit :integer :null][
-        ;; description: « find tasks without implementation for given language
+    fetchCategory: method [category :string][
+        ;; description: « fetch all members of a category with pagination
         ;; returns: :block
 
-        lmt: limit ?? 50
+        results: []
+        continue: ""
         
-        ; Get all programming tasks
-        allTasks: \wiki\search.limit:lmt "incategory:\"Programming Tasks\""
+        while ø [
+            params: #[
+                action: "query"
+                list: "categorymembers"
+                cmtitle: ~"Category:|category|"
+                cmlimit: "500"
+                format: "json"
+            ]
+            
+            unless empty? continue ->
+                params\cmcontinue: continue
+
+            response: \wiki\api.get params
+            body: read.json response\body
+            
+            'results ++ map body\query\categorymembers 'page ->
+                page\title
+                
+            (key? body 'continue)?
+                -> continue: body\continue\cmcontinue
+                -> break
+        ]
         
-        ; Filter out tasks that already have the language
-        return select allTasks 'task -> not? \hasLanguage task lang
+        return results
     ]
     
-    implemented: method [lang :string, limit :integer :null][
+    unimplemented: method [lang :string][
+        ;; description: « find all tasks without implementation for given language
+        ;; returns: :block
+
+        allTasks: \fetchCategory "Programming_Tasks"
+        langTasks: \fetchCategory lang
+        
+        return difference allTasks langTasks
+    ]
+    
+    implemented: method [lang :string][
         ;; description: « get all tasks with implementations for given language
         ;; returns: :block
 
-        ;lmt: limit ?? 100
-        inspect \wiki
-        allTasks: \wiki\search.category:"Programming Tasks" lang
-        inspect allTasks
-        ;return select allTasks 'task -> task\hasLanguage? lang
+        return \fetchCategory lang
     ]
     
     draftTasks: method [limit :integer :null][
