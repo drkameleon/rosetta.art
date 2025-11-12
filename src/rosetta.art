@@ -8,7 +8,7 @@
 ; (c) 2025 Yanis Zafirópulos
 ;===============================================
 
-import ./{../../mwiki.art/src/mwiki}!
+import'mwiki!
 
 ;===========================================
 ; Type definitions
